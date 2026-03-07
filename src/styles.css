@@ -12,6 +12,7 @@
 
 html,
 body,
+#app-shell,
 #app {
   margin: 0;
   min-height: 100%;
@@ -20,6 +21,47 @@ body,
 
 body {
   min-height: 100vh;
+}
+
+#app-shell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+#hud {
+  position: absolute;
+  top: 32px;
+  left: 32px;
+  z-index: 1;
+  max-width: min(320px, calc(100vw - 48px));
+  padding: 14px 16px;
+  border: 1px solid rgba(241, 250, 238, 0.18);
+  border-radius: 14px;
+  background: rgba(3, 6, 12, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.hud-label,
+.hud-instructions {
+  margin: 0;
+}
+
+.hud-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f4d35e;
+}
+
+.hud-instructions {
+  margin-top: 6px;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: #f1faee;
 }
 
 canvas {

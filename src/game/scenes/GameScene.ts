@@ -2,8 +2,10 @@ import Phaser from "phaser";
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
-  private platforms!: Phaser.Physics.Arcade.StaticGroup;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private wasd!: Record<"w" | "a" | "s" | "d", Phaser.Input.Keyboard.Key>;
+  private walls!: Phaser.Physics.Arcade.StaticGroup;
+  private moveTween?: Phaser.Tweens.Tween;
 
   constructor() {
     super("game");
@@ -12,18 +14,16 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBackgroundColor("#09111f");
 
-    this.platforms = this.physics.add.staticGroup();
-    this.createPlatform(480, 520, 960, 40, 0x1d3557);
-    this.createPlatform(160, 390, 220, 24, 0x457b9d);
-    this.createPlatform(490, 300, 240, 24, 0x457b9d);
-    this.createPlatform(810, 210, 180, 24, 0x457b9d);
+    this.createFloorGrid();
+    this.walls = this.physics.add.staticGroup();
+    this.createWall(480, 270, 96, 220, 0xe63946);
 
     this.player = this.physics.add
       .sprite(140, 440, this.createRectTexture("player", 48, 48, 0xf4d35e))
-      .setBounce(0.05)
       .setCollideWorldBounds(true);
-
-    this.physics.add.collider(this.player, this.platforms);
+    this.player.body.setAllowGravity(false);
+    this.physics.add.collider(this.player, this.walls);
+    this.player.setScale(1);
 
     if (!this.input.keyboard) {
       throw new Error("Keyboard input is unavailable.");
@@ -36,34 +36,85 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.cursors = keyboard;
-
-    this.add.text(24, 24, "Arrow keys to move, up to jump", {
-      fontFamily: "monospace",
-      fontSize: "24px",
-      color: "#f1faee"
-    });
+    this.wasd = {
+      w: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      a: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      s: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      d: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
+    };
   }
 
   update(): void {
     const speed = 260;
+    let velocityX = 0;
+    let velocityY = 0;
 
-    if (this.cursors.left.isDown) {
-      this.player.setVelocityX(-speed);
-    } else if (this.cursors.right.isDown) {
-      this.player.setVelocityX(speed);
-    } else {
-      this.player.setVelocityX(0);
+    if (this.cursors.left.isDown || this.wasd.a.isDown) {
+      velocityX -= speed;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.up) && this.player.body.blocked.down) {
-      this.player.setVelocityY(-520);
+    if (this.cursors.right.isDown || this.wasd.d.isDown) {
+      velocityX += speed;
+    }
+
+    if (this.cursors.up.isDown || this.wasd.w.isDown) {
+      velocityY -= speed;
+    }
+
+    if (this.cursors.down?.isDown || this.wasd.s.isDown) {
+      velocityY += speed;
+    }
+
+    this.player.setVelocity(velocityX, velocityY);
+    this.updateMoveAnimation(velocityX !== 0 || velocityY !== 0);
+  }
+
+  private createFloorGrid(): void {
+    const graphics = this.add.graphics();
+    graphics.lineStyle(1, 0x1d3557, 0.65);
+
+    for (let x = 0; x <= 960; x += 48) {
+      graphics.lineBetween(x, 0, x, 540);
+    }
+
+    for (let y = 0; y <= 540; y += 48) {
+      graphics.lineBetween(0, y, 960, y);
     }
   }
 
-  private createPlatform(x: number, y: number, width: number, height: number, color: number): void {
-    this.platforms
-      .create(x, y, this.createRectTexture(`platform-${x}-${y}`, width, height, color))
-      .refreshBody();
+  private createWall(x: number, y: number, width: number, height: number, color: number): void {
+    this.walls.create(x, y, this.createRectTexture(`wall-${x}-${y}`, width, height, color)).refreshBody();
+  }
+
+  private updateMoveAnimation(isMoving: boolean): void {
+    if (isMoving) {
+      if (this.moveTween) {
+        return;
+      }
+
+      this.moveTween = this.tweens.add({
+        targets: this.player,
+        scaleX: 1.16,
+        scaleY: 0.88,
+        duration: 180,
+        ease: "Sine.InOut",
+        yoyo: true,
+        repeat: -1
+      });
+
+      return;
+    }
+
+    this.moveTween?.stop();
+    this.moveTween = undefined;
+
+    this.tweens.add({
+      targets: this.player,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 120,
+      ease: "Quad.Out"
+    });
   }
 
   private createRectTexture(key: string, width: number, height: number, color: number): string {

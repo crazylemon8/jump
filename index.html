@@ -6,7 +6,13 @@
     <title>Jump</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app-shell">
+      <div id="app"></div>
+      <div id="hud" aria-live="polite">
+        <p class="hud-label">Jump</p>
+        <p class="hud-instructions">Arrow keys to move, up to jump</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
   </html>
