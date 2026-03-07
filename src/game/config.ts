@@ -1,6 +1,8 @@
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
 export const GRID_SIZE = 48;
+export const CHUNK_TILE_SIZE = 16;
+export const CHUNK_VIEW_PADDING = 1;
 export const SHOW_GRID = false;
 
 export const PLAYER_SPEED = 260;

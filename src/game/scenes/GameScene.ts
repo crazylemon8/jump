@@ -1,11 +1,10 @@
 import Phaser from "phaser";
-import { PLAYER_SPEED, SHOW_GRID } from "../config";
+import { PLAYER_SPEED } from "../config";
 import { ProjectileSystem } from "../entities/ProjectileSystem";
 import { createControls, type Controls, getMovementVector } from "../input/createControls";
-import { createGroundMap } from "../render/createGroundMap";
-import { InfiniteGrid } from "../render/InfiniteGrid";
 import { createSlimeTexture, type SlimeDirection } from "../render/createOvalTexture";
 import { createRectTexture } from "../render/createRectTexture";
+import { createDefaultWorldTheme, type WorldTheme } from "../world/themes";
 
 export class GameScene extends Phaser.Scene {
   private static readonly PLAYER_TEXTURE_WIDTH = 108;
@@ -19,9 +18,9 @@ export class GameScene extends Phaser.Scene {
 
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private controls!: Controls;
-  private grid?: InfiniteGrid;
   private walls!: Phaser.Physics.Arcade.StaticGroup;
   private projectiles!: ProjectileSystem;
+  private worldTheme!: WorldTheme;
   private idleTween?: Phaser.Tweens.Tween;
   private moveTween?: Phaser.Tweens.Tween;
   private isMoving = false;
@@ -32,10 +31,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    createGroundMap(this);
-    if (SHOW_GRID) {
-      this.grid = new InfiniteGrid(this);
-    }
+    this.worldTheme = createDefaultWorldTheme();
+    this.worldTheme.apply(this);
     this.walls = this.physics.add.staticGroup();
     this.createWall(480, 270, 96, 220, 0xe63946);
     this.projectiles = new ProjectileSystem(this, this.walls);
@@ -51,7 +48,10 @@ export class GameScene extends Phaser.Scene {
     this.controls = createControls(this);
     this.startIdleAnimation();
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
-    this.grid?.update(this.cameras.main);
+    this.worldTheme.update(this.cameras.main);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.worldTheme.destroy();
+    });
   }
 
   update(): void {
@@ -61,7 +61,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setVelocity(velocity.x, velocity.y);
     this.updateFacing(movement);
     this.updateMoveAnimation(!movement.equals(Phaser.Math.Vector2.ZERO));
-    this.grid?.update(this.cameras.main);
+    this.worldTheme.update(this.cameras.main);
     this.projectiles.update();
 
     if (Phaser.Input.Keyboard.JustDown(this.controls.shoot)) {

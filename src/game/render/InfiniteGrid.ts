@@ -4,7 +4,11 @@ import { GRID_SIZE } from "../config";
 export class InfiniteGrid {
   private readonly graphics: Phaser.GameObjects.Graphics;
 
-  constructor(private readonly scene: Phaser.Scene) {
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly lineColor: number,
+    private readonly alpha: number
+  ) {
     this.graphics = this.scene.add.graphics();
     this.graphics.setDepth(-50);
   }
@@ -17,7 +21,7 @@ export class InfiniteGrid {
     const endY = Math.ceil(view.bottom / GRID_SIZE) * GRID_SIZE;
 
     this.graphics.clear();
-    this.graphics.lineStyle(1, 0x4c3218, 0.42);
+    this.graphics.lineStyle(1, this.lineColor, this.alpha);
 
     for (let x = startX; x <= endX; x += GRID_SIZE) {
       this.graphics.lineBetween(x, startY, x, endY);
@@ -26,5 +30,9 @@ export class InfiniteGrid {
     for (let y = startY; y <= endY; y += GRID_SIZE) {
       this.graphics.lineBetween(startX, y, endX, y);
     }
+  }
+
+  destroy(): void {
+    this.graphics.destroy();
   }
 }
