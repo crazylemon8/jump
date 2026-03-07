@@ -30,17 +30,16 @@ export class ProjectileSystem {
   }
 
   update(): void {
-    const width = this.scene.scale.width;
-    const height = this.scene.scale.height;
+    const view = this.scene.cameras.main.worldView;
 
     this.bullets.children.each((child) => {
       const bullet = child as Phaser.Physics.Arcade.Sprite;
 
       if (
-        bullet.x < -BULLET_CULL_MARGIN ||
-        bullet.x > width + BULLET_CULL_MARGIN ||
-        bullet.y < -BULLET_CULL_MARGIN ||
-        bullet.y > height + BULLET_CULL_MARGIN
+        bullet.x < view.x - BULLET_CULL_MARGIN ||
+        bullet.x > view.right + BULLET_CULL_MARGIN ||
+        bullet.y < view.y - BULLET_CULL_MARGIN ||
+        bullet.y > view.bottom + BULLET_CULL_MARGIN
       ) {
         bullet.destroy();
       }
