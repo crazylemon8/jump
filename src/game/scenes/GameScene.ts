@@ -3,6 +3,7 @@ import { PLAYER_SPEED } from "../config";
 import { ProjectileSystem } from "../entities/ProjectileSystem";
 import { createControls, type Controls, getMovementVector } from "../input/createControls";
 import { createFloorGrid } from "../render/createFloorGrid";
+import { createSlimeTexture, type SlimeDirection } from "../render/createOvalTexture";
 import { createRectTexture } from "../render/createRectTexture";
 
 export class GameScene extends Phaser.Scene {
@@ -26,9 +27,11 @@ export class GameScene extends Phaser.Scene {
     this.projectiles = new ProjectileSystem(this, this.walls);
 
     this.player = this.physics.add
-      .sprite(140, 440, createRectTexture(this, "player", 48, 48, 0xf4d35e))
+      .sprite(140, 440, this.getSlimeTexture("right"))
       .setCollideWorldBounds(true);
     this.player.body.setAllowGravity(false);
+    this.player.setSize(42, 28);
+    this.player.setOffset(6, 6);
     this.physics.add.collider(this.player, this.walls);
     this.player.setScale(1);
     this.controls = createControls(this);
@@ -60,8 +63,8 @@ export class GameScene extends Phaser.Scene {
 
       this.moveTween = this.tweens.add({
         targets: this.player,
-        scaleX: 1.16,
-        scaleY: 0.88,
+        scaleX: 1.12,
+        scaleY: 0.92,
         duration: 180,
         ease: "Sine.InOut",
         yoyo: true,
@@ -89,5 +92,24 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.facing.copy(movement).normalize();
+    this.updatePlayerVisualDirection();
+  }
+
+  private updatePlayerVisualDirection(): void {
+    if (Math.abs(this.facing.x) > Math.abs(this.facing.y)) {
+      this.player.setTexture(this.getSlimeTexture(this.facing.x < 0 ? "left" : "right"));
+      return;
+    }
+
+    if (this.facing.y < 0) {
+      this.player.setTexture(this.getSlimeTexture("back"));
+      return;
+    }
+
+    this.player.setTexture(this.getSlimeTexture("front"));
+  }
+
+  private getSlimeTexture(direction: SlimeDirection): string {
+    return createSlimeTexture(this, `player-${direction}`, 54, 40, 0x9be564, direction);
   }
 }
