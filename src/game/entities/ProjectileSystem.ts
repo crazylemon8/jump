@@ -46,6 +46,17 @@ export class ProjectileSystem {
     });
   }
 
+  registerHitTarget(
+    target: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Group | Phaser.Physics.Arcade.StaticGroup,
+    onHit: (bullet: Phaser.Physics.Arcade.Sprite) => void
+  ): Phaser.Physics.Arcade.Collider {
+    return this.scene.physics.add.overlap(this.bullets, target, (bullet) => {
+      const projectile = bullet as Phaser.Physics.Arcade.Sprite;
+      onHit(projectile);
+      projectile.destroy();
+    });
+  }
+
   update(): void {
     const view = this.scene.cameras.main.worldView;
 

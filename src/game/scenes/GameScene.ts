@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { PLAYER_SPEED } from "../config";
+import { PatrollingEnemy } from "../entities/PatrollingEnemy";
 import { ProjectileSystem } from "../entities/ProjectileSystem";
 import { createControls, type Controls, getMovementVector } from "../input/createControls";
 import { createSlimeTexture, type SlimeDirection } from "../render/createOvalTexture";
@@ -18,9 +19,13 @@ export class GameScene extends Phaser.Scene {
 
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private controls!: Controls;
+  private enemy!: PatrollingEnemy;
   private walls!: Phaser.Physics.Arcade.StaticGroup;
   private projectiles!: ProjectileSystem;
   private worldTheme!: WorldTheme;
+  private enemyHitOverlap?: Phaser.Physics.Arcade.Collider;
+  private playerEnemyCollider?: Phaser.Physics.Arcade.Collider;
+  private wallEnemyCollider?: Phaser.Physics.Arcade.Collider;
   private idleTween?: Phaser.Tweens.Tween;
   private moveTween?: Phaser.Tweens.Tween;
   private isMoving = false;
@@ -36,6 +41,7 @@ export class GameScene extends Phaser.Scene {
     this.walls = this.physics.add.staticGroup();
     this.createWall(480, 270, 96, 220, 0xe63946);
     this.projectiles = new ProjectileSystem(this, this.walls);
+    this.spawnEnemy();
 
     this.player = this.physics.add
       .sprite(140, 440, this.getSlimeTexture("right"))
@@ -50,8 +56,13 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
     this.worldTheme.update(this.cameras.main);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.enemyHitOverlap?.destroy();
+      this.playerEnemyCollider?.destroy();
+      this.wallEnemyCollider?.destroy();
       this.worldTheme.destroy();
     });
+
+    this.bindEnemyInteractions();
   }
 
   update(): void {
@@ -59,6 +70,7 @@ export class GameScene extends Phaser.Scene {
     const velocity = movement.clone().normalize().scale(PLAYER_SPEED);
 
     this.player.setVelocity(velocity.x, velocity.y);
+    this.enemy.update();
     this.updateFacing(movement);
     this.updateMoveAnimation(!movement.equals(Phaser.Math.Vector2.ZERO));
     this.worldTheme.update(this.cameras.main);
@@ -71,6 +83,32 @@ export class GameScene extends Phaser.Scene {
 
   private createWall(x: number, y: number, width: number, height: number, color: number): void {
     this.walls.create(x, y, createRectTexture(this, `wall-${x}-${y}`, width, height, color)).refreshBody();
+  }
+
+  private spawnEnemy(): void {
+    const spawnX = Phaser.Math.Between(620, 900);
+    const patrolHalfWidth = Phaser.Math.Between(70, 130);
+    const minX = spawnX - patrolHalfWidth;
+    const maxX = spawnX + patrolHalfWidth;
+
+    this.enemy = new PatrollingEnemy(this, spawnX, 430, minX, maxX, Phaser.Math.Between(60, 95), () => {
+      this.time.delayedCall(450, () => {
+        this.spawnEnemy();
+        this.bindEnemyInteractions();
+      });
+    });
+  }
+
+  private bindEnemyInteractions(): void {
+    this.enemyHitOverlap?.destroy();
+    this.playerEnemyCollider?.destroy();
+    this.wallEnemyCollider?.destroy();
+
+    this.wallEnemyCollider = this.physics.add.collider(this.enemy.gameObject, this.walls);
+    this.playerEnemyCollider = this.physics.add.collider(this.player, this.enemy.gameObject);
+    this.enemyHitOverlap = this.projectiles.registerHitTarget(this.enemy.gameObject, () => {
+      this.enemy.takeHit(this.facing);
+    });
   }
 
   private updateMoveAnimation(isMoving: boolean): void {
