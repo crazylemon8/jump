@@ -33,7 +33,9 @@ export class GameScene extends Phaser.Scene {
   private spawnTimer?: Phaser.Time.TimerEvent;
   private isMoving = false;
   private isGameOver = false;
+  private isRoundActive = false;
   private retryHandler?: () => void;
+  private startHandler?: (event: KeyboardEvent) => void;
   private facing = new Phaser.Math.Vector2(1, 0);
   private redSorted = 0;
   private greenSorted = 0;
@@ -58,7 +60,8 @@ export class GameScene extends Phaser.Scene {
       loop: true,
       callback: () => {
         this.spawnSkeleton();
-      }
+      },
+      paused: true
     });
 
     this.player = this.physics.add
@@ -121,18 +124,28 @@ export class GameScene extends Phaser.Scene {
     this.startIdleAnimation();
     this.updateHud();
     this.setGameOverOverlay(false);
+    this.setStartOverlay(true);
 
     this.retryHandler = () => {
       this.physics.resume();
       this.scene.restart();
     };
 
+    this.startHandler = () => {
+      this.beginRound();
+    };
+
     document.querySelector<HTMLButtonElement>("#retry-button")?.addEventListener("click", this.retryHandler);
+    window.addEventListener("keydown", this.startHandler, { once: true });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.spawnTimer?.destroy();
       document.querySelector<HTMLButtonElement>("#retry-button")?.removeEventListener("click", this.retryHandler!);
+      if (this.startHandler) {
+        window.removeEventListener("keydown", this.startHandler);
+      }
       this.setGameOverOverlay(false);
+      this.setStartOverlay(false);
       this.worldTheme.destroy();
     });
   }
@@ -148,6 +161,8 @@ export class GameScene extends Phaser.Scene {
     this.moveTween = undefined;
     this.spawnTimer = undefined;
     this.retryHandler = undefined;
+    this.startHandler = undefined;
+    this.isRoundActive = false;
     this.facing.set(1, 0);
   }
 
@@ -157,11 +172,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     const movement = getMovementVector(this.controls.cursors, this.controls.wasd);
-    this.updatePlayerMovement(movement);
+    if (this.isRoundActive) {
+      this.updatePlayerMovement(movement);
+    } else {
+      this.player.setVelocity(0, 0);
+    }
     this.updateFacing(movement);
     this.updateMoveAnimation(Math.abs(this.player.body.velocity.x) > 8);
     this.worldTheme.update(this.cameras.main);
-    this.updateEnemies();
+    if (this.isRoundActive) {
+      this.updateEnemies();
+    }
     this.respawnPlayerIfNeeded();
   }
 
@@ -391,6 +412,7 @@ export class GameScene extends Phaser.Scene {
 
   private endGame(): void {
     this.isGameOver = true;
+    this.isRoundActive = false;
     this.spawnTimer?.remove(false);
     this.player.setVelocity(0, 0);
     this.physics.pause();
@@ -403,6 +425,31 @@ export class GameScene extends Phaser.Scene {
     if (overlay) {
       overlay.hidden = !isVisible;
     }
+  }
+
+  private setStartOverlay(isVisible: boolean): void {
+    const overlay = document.querySelector<HTMLElement>("#game-start");
+
+    if (overlay) {
+      overlay.hidden = !isVisible;
+    }
+  }
+
+  private beginRound(): void {
+    if (this.isRoundActive || this.isGameOver) {
+      return;
+    }
+
+    this.isRoundActive = true;
+    this.spawnTimer?.reset({
+      delay: 1600,
+      loop: true,
+      callback: () => {
+        this.spawnSkeleton();
+      },
+      paused: false
+    });
+    this.setStartOverlay(false);
   }
 
   private getSlimeTexture(direction: SlimeDirection): string {
