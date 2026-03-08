@@ -9,9 +9,12 @@ export function createSkeletonTexture(scene: Phaser.Scene, key: string, width: n
   const skullX = width * 0.5;
   const skullY = height * 0.22;
 
-  graphics.lineStyle(2, 0x4a4a4a, 1);
+  graphics.lineStyle(3, 0x2d1a16, 0.9);
 
-  graphics.fillStyle(0xe8e8e8, 1);
+  graphics.fillStyle(0xffffff, 0.18);
+  graphics.fillCircle(skullX, skullY, width * 0.18);
+
+  graphics.fillStyle(0xf4f1ec, 1);
   graphics.fillCircle(skullX, skullY, width * 0.14);
   graphics.strokeCircle(skullX, skullY, width * 0.14);
 
@@ -34,13 +37,18 @@ export function createSkeletonTexture(scene: Phaser.Scene, key: string, width: n
   graphics.strokeLineShape(new Phaser.Geom.Line(width * 0.5, height * 0.54, width * 0.58, height * 0.76));
   graphics.strokeLineShape(new Phaser.Geom.Line(width * 0.58, height * 0.76, width * 0.65, height * 0.95));
 
-  graphics.fillStyle(0xe8e8e8, 1);
+  graphics.fillStyle(0xf4f1ec, 1);
   graphics.fillCircle(width * 0.28, height * 0.69, width * 0.03);
   graphics.fillCircle(width * 0.77, height * 0.69, width * 0.03);
   graphics.fillCircle(width * 0.34, height * 0.95, width * 0.04);
   graphics.fillCircle(width * 0.65, height * 0.95, width * 0.04);
 
-  graphics.lineStyle(3, 0xc89a1d, 1);
+  graphics.lineStyle(4, 0x7a4a10, 0.75);
+  graphics.beginPath();
+  graphics.arc(width * 0.18, height * 0.6, width * 0.24, Phaser.Math.DegToRad(290), Phaser.Math.DegToRad(70), false);
+  graphics.strokePath();
+
+  graphics.lineStyle(3, 0xd9aa2a, 1);
   graphics.beginPath();
   graphics.arc(width * 0.18, height * 0.6, width * 0.22, Phaser.Math.DegToRad(290), Phaser.Math.DegToRad(70), false);
   graphics.strokePath();

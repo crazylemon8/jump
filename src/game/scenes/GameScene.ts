@@ -1,7 +1,6 @@
 import Phaser from "phaser";
-import { PLAYER_SPEED } from "../config";
-import { PatrollingEnemy } from "../entities/PatrollingEnemy";
-import { ProjectileSystem } from "../entities/ProjectileSystem";
+import { GAME_HEIGHT, GAME_WIDTH, PLAYER_SPEED } from "../config";
+import { SortingSkeleton, type ExitSide, type SkeletonColor } from "../entities/SortingSkeleton";
 import { createControls, type Controls, getMovementVector } from "../input/createControls";
 import { createSlimeTexture, type SlimeDirection } from "../render/createOvalTexture";
 import { createRectTexture } from "../render/createRectTexture";
@@ -16,20 +15,27 @@ export class GameScene extends Phaser.Scene {
     GameScene.PLAYER_DISPLAY_WIDTH / GameScene.PLAYER_TEXTURE_WIDTH;
   private static readonly PLAYER_BASE_SCALE_Y =
     GameScene.PLAYER_DISPLAY_HEIGHT / GameScene.PLAYER_TEXTURE_HEIGHT;
+  private static readonly FLOOR_Y = 476;
+  private static readonly FLOOR_WIDTH = 640;
+  private static readonly FLOOR_HEIGHT = 36;
+  private static readonly FLOOR_X = GAME_WIDTH / 2;
+  private static readonly PLAYER_SPAWN_X = GAME_WIDTH / 2;
+  private static readonly PLAYER_SPAWN_Y = 390;
 
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private controls!: Controls;
-  private enemy!: PatrollingEnemy;
-  private walls!: Phaser.Physics.Arcade.StaticGroup;
-  private projectiles!: ProjectileSystem;
+  private floor!: Phaser.Types.Physics.Arcade.ImageWithStaticBody;
+  private enemies: SortingSkeleton[] = [];
+  private enemyGroup!: Phaser.Physics.Arcade.Group;
   private worldTheme!: WorldTheme;
-  private enemyHitOverlap?: Phaser.Physics.Arcade.Collider;
-  private playerEnemyCollider?: Phaser.Physics.Arcade.Collider;
-  private wallEnemyCollider?: Phaser.Physics.Arcade.Collider;
   private idleTween?: Phaser.Tweens.Tween;
   private moveTween?: Phaser.Tweens.Tween;
+  private spawnTimer?: Phaser.Time.TimerEvent;
   private isMoving = false;
   private facing = new Phaser.Math.Vector2(1, 0);
+  private redSorted = 0;
+  private greenSorted = 0;
+  private mistakes = 0;
 
   constructor() {
     super("game");
@@ -38,77 +44,202 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.worldTheme = createDefaultWorldTheme();
     this.worldTheme.apply(this);
-    this.walls = this.physics.add.staticGroup();
-    this.createWall(480, 270, 96, 220, 0xe63946);
-    this.projectiles = new ProjectileSystem(this, this.walls);
-    this.spawnEnemy();
+    this.cameras.main.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    this.player = this.physics.add
-      .sprite(140, 440, this.getSlimeTexture("right"))
-      .setCollideWorldBounds(false);
-    this.player.setScale(GameScene.PLAYER_BASE_SCALE_X, GameScene.PLAYER_BASE_SCALE_Y);
-    this.player.body.setAllowGravity(false);
-    this.player.setSize(42, 28);
-    this.player.setOffset(33, 26);
-    this.physics.add.collider(this.player, this.walls);
-    this.controls = createControls(this);
-    this.startIdleAnimation();
-    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
-    this.worldTheme.update(this.cameras.main);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.enemyHitOverlap?.destroy();
-      this.playerEnemyCollider?.destroy();
-      this.wallEnemyCollider?.destroy();
-      this.worldTheme.destroy();
+    this.createLedge();
+    this.createGoalMarkers();
+
+    this.enemyGroup = this.physics.add.group();
+    this.spawnTimer = this.time.addEvent({
+      delay: 1600,
+      loop: true,
+      callback: () => {
+        this.spawnSkeleton();
+      }
     });
 
-    this.bindEnemyInteractions();
+    this.player = this.physics.add
+      .sprite(GameScene.PLAYER_SPAWN_X, GameScene.PLAYER_SPAWN_Y, this.getSlimeTexture("right"))
+      .setCollideWorldBounds(false);
+    this.player.setScale(GameScene.PLAYER_BASE_SCALE_X, GameScene.PLAYER_BASE_SCALE_Y);
+    this.player.setSize(42, 28);
+    this.player.setOffset(33, 26);
+    this.player.setBounce(0);
+    this.player.setDragX(1400);
+    this.player.setMaxVelocity(PLAYER_SPEED, 900);
+
+    this.physics.add.collider(this.player, this.floor);
+    this.physics.add.collider(this.enemyGroup, this.floor);
+    this.physics.add.collider(
+      this.enemyGroup,
+      this.enemyGroup,
+      undefined,
+      (leftGO, rightGO) => {
+        const leftEnemy = this.findEnemy(leftGO as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody);
+        const rightEnemy = this.findEnemy(rightGO as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody);
+
+        if (!leftEnemy || !rightEnemy) {
+          return true;
+        }
+
+        return leftEnemy.horizontalDirection === rightEnemy.horizontalDirection;
+      }
+    );
+    this.physics.add.collider(
+      this.player,
+      this.enemyGroup,
+      (_player, enemyGO) => {
+        const enemy = this.findEnemy(enemyGO as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody);
+
+        if (!enemy) {
+          return;
+        }
+
+        enemy.redirectFromPlayer(this.player.x, this.time.now);
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        body.velocity.x += enemy.gameObject.x < this.player.x ? 40 : -40;
+      },
+      (_player, enemyGO) => {
+        const enemy = this.findEnemy(enemyGO as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody);
+
+        if (!enemy) {
+          return true;
+        }
+
+        const movingTowardCorrectSide =
+          (enemy.skeletonColor === "red" && enemy.horizontalDirection === -1) ||
+          (enemy.skeletonColor === "green" && enemy.horizontalDirection === 1);
+
+        return !movingTowardCorrectSide;
+      }
+    );
+
+    this.controls = createControls(this);
+    this.startIdleAnimation();
+    this.updateHud();
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.spawnTimer?.destroy();
+      this.worldTheme.destroy();
+    });
   }
 
   update(): void {
     const movement = getMovementVector(this.controls.cursors, this.controls.wasd);
-    const velocity = movement.clone().normalize().scale(PLAYER_SPEED);
-
-    this.player.setVelocity(velocity.x, velocity.y);
-    this.enemy.update();
+    this.updatePlayerMovement(movement);
     this.updateFacing(movement);
-    this.updateMoveAnimation(!movement.equals(Phaser.Math.Vector2.ZERO));
+    this.updateMoveAnimation(Math.abs(this.player.body.velocity.x) > 8);
     this.worldTheme.update(this.cameras.main);
-    this.projectiles.update();
+    this.updateEnemies();
+    this.respawnPlayerIfNeeded();
+  }
 
-    if (Phaser.Input.Keyboard.JustDown(this.controls.shoot)) {
-      this.projectiles.fire(new Phaser.Math.Vector2(this.player.x, this.player.y), this.facing);
+  private createLedge(): void {
+    this.floor = this.physics.add
+      .staticImage(
+        GameScene.FLOOR_X,
+        GameScene.FLOOR_Y,
+        createRectTexture(this, "ledge-floor", GameScene.FLOOR_WIDTH, GameScene.FLOOR_HEIGHT, 0x6f3323)
+      )
+      .setDepth(-10);
+    this.floor.refreshBody();
+
+    const trim = this.add.graphics();
+    trim.setDepth(-9);
+    trim.fillStyle(0xff7a21, 0.85);
+    trim.fillRect(
+      GameScene.FLOOR_X - GameScene.FLOOR_WIDTH / 2,
+      GameScene.FLOOR_Y - GameScene.FLOOR_HEIGHT / 2,
+      GameScene.FLOOR_WIDTH,
+      6
+    );
+  }
+
+  private createGoalMarkers(): void {
+    const graphics = this.add.graphics();
+    graphics.setDepth(-5);
+
+    graphics.fillStyle(0xff5757, 0.95);
+    graphics.fillTriangle(104, GameScene.FLOOR_Y - 12, 62, GameScene.FLOOR_Y + 10, 104, GameScene.FLOOR_Y + 30);
+
+    graphics.fillStyle(0x67e27d, 0.95);
+    graphics.fillTriangle(
+      GAME_WIDTH - 104,
+      GameScene.FLOOR_Y - 12,
+      GAME_WIDTH - 62,
+      GameScene.FLOOR_Y + 10,
+      GAME_WIDTH - 104,
+      GameScene.FLOOR_Y + 30
+    );
+  }
+
+  private spawnSkeleton(): void {
+    const spawnBandWidth = GameScene.FLOOR_WIDTH * 0.3;
+    const minSpawnX = GameScene.FLOOR_X - spawnBandWidth / 2;
+    const maxSpawnX = GameScene.FLOOR_X + spawnBandWidth / 2;
+    const color: SkeletonColor = Phaser.Math.Between(0, 1) === 0 ? "red" : "green";
+    const enemy = new SortingSkeleton(this, Phaser.Math.Between(minSpawnX, maxSpawnX), 88, color);
+
+    this.enemies.push(enemy);
+    this.enemyGroup.add(enemy.gameObject);
+  }
+
+  private updatePlayerMovement(movement: Phaser.Math.Vector2): void {
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const horizontal = Phaser.Math.Clamp(movement.x, -1, 1);
+    this.player.setVelocityX(horizontal * PLAYER_SPEED);
+
+    if (movement.y < 0 && body.blocked.down) {
+      this.player.setVelocityY(-520);
     }
   }
 
-  private createWall(x: number, y: number, width: number, height: number, color: number): void {
-    this.walls.create(x, y, createRectTexture(this, `wall-${x}-${y}`, width, height, color)).refreshBody();
+  private updateEnemies(): void {
+    for (let index = this.enemies.length - 1; index >= 0; index -= 1) {
+      const enemy = this.enemies[index];
+      enemy.update();
+
+      const exitSide = enemy.getExitSide();
+
+      if (!exitSide) {
+        continue;
+      }
+
+      this.handleEnemyExit(enemy, exitSide);
+      this.enemies.splice(index, 1);
+    }
   }
 
-  private spawnEnemy(): void {
-    const spawnX = Phaser.Math.Between(620, 900);
-    const patrolHalfWidth = Phaser.Math.Between(70, 130);
-    const minX = spawnX - patrolHalfWidth;
-    const maxX = spawnX + patrolHalfWidth;
+  private handleEnemyExit(enemy: SortingSkeleton, exitSide: ExitSide): void {
+    const color = enemy.skeletonColor;
+    const isCorrect =
+      (color === "red" && exitSide === "left") || (color === "green" && exitSide === "right");
 
-    this.enemy = new PatrollingEnemy(this, spawnX, 430, minX, maxX, Phaser.Math.Between(60, 95), () => {
-      this.time.delayedCall(450, () => {
-        this.spawnEnemy();
-        this.bindEnemyInteractions();
-      });
-    });
+    if (isCorrect) {
+      if (color === "red") {
+        this.redSorted += 1;
+      } else {
+        this.greenSorted += 1;
+      }
+    } else {
+      this.mistakes += 1;
+    }
+
+    enemy.destroy();
+    this.updateHud();
   }
 
-  private bindEnemyInteractions(): void {
-    this.enemyHitOverlap?.destroy();
-    this.playerEnemyCollider?.destroy();
-    this.wallEnemyCollider?.destroy();
+  private respawnPlayerIfNeeded(): void {
+    if (this.player.y <= GAME_HEIGHT + 80) {
+      return;
+    }
 
-    this.wallEnemyCollider = this.physics.add.collider(this.enemy.gameObject, this.walls);
-    this.playerEnemyCollider = this.physics.add.collider(this.player, this.enemy.gameObject);
-    this.enemyHitOverlap = this.projectiles.registerHitTarget(this.enemy.gameObject, () => {
-      this.enemy.takeHit(this.facing);
-    });
+    this.player.setPosition(GameScene.PLAYER_SPAWN_X, GameScene.PLAYER_SPAWN_Y);
+    this.player.setVelocity(0, 0);
+  }
+
+  private findEnemy(sprite: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody): SortingSkeleton | undefined {
+    return this.enemies.find((enemy) => enemy.gameObject === sprite);
   }
 
   private updateMoveAnimation(isMoving: boolean): void {
@@ -180,7 +311,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.facing.copy(movement).normalize();
+    if (Math.abs(movement.x) >= Math.abs(movement.y)) {
+      this.facing.set(Math.sign(movement.x) || this.facing.x || 1, 0);
+    } else {
+      this.facing.set(0, Math.sign(movement.y));
+    }
+
     this.updatePlayerVisualDirection();
   }
 
@@ -196,6 +332,24 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.player.setTexture(this.getSlimeTexture("front"));
+  }
+
+  private updateHud(): void {
+    const label = document.querySelector<HTMLElement>(".hud-label");
+    const instructions = document.querySelector<HTMLElement>(".hud-instructions");
+    const status = document.querySelector<HTMLElement>("#hud-status");
+
+    if (label) {
+      label.textContent = "Gatekeeper";
+    }
+
+    if (instructions) {
+      instructions.textContent = "Guard the infernal ledge. Bump red skeletons left and green skeletons right.";
+    }
+
+    if (status) {
+      status.textContent = `Red sorted: ${this.redSorted} | Green sorted: ${this.greenSorted} | Mistakes: ${this.mistakes}`;
+    }
   }
 
   private getSlimeTexture(direction: SlimeDirection): string {

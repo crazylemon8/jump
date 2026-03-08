@@ -84,19 +84,19 @@ export class ChunkedGroundLayer {
   private getTileColor(tileX: number, tileY: number): number {
     const noise = this.hash(tileX, tileY);
 
-    if (noise < 0.18) {
-      return 0x6a4324;
+    if (noise < 0.14) {
+      return 0x2a1110;
     }
 
-    if (noise < 0.34) {
-      return 0x734b29;
+    if (noise < 0.3) {
+      return 0x3a1714;
     }
 
-    if (noise < 0.82) {
-      return 0x7b5230;
+    if (noise < 0.78) {
+      return 0x4a1e17;
     }
 
-    return 0x875c38;
+    return 0x5d261b;
   }
 
   private hash(x: number, y: number): number {
