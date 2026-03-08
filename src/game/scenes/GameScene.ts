@@ -32,16 +32,19 @@ export class GameScene extends Phaser.Scene {
   private moveTween?: Phaser.Tweens.Tween;
   private spawnTimer?: Phaser.Time.TimerEvent;
   private isMoving = false;
+  private isGameOver = false;
+  private retryHandler?: () => void;
   private facing = new Phaser.Math.Vector2(1, 0);
   private redSorted = 0;
   private greenSorted = 0;
-  private mistakes = 0;
+  private mistakesRemaining = 5;
 
   constructor() {
     super("game");
   }
 
   create(): void {
+    this.resetState();
     this.worldTheme = createDefaultWorldTheme();
     this.worldTheme.apply(this);
     this.cameras.main.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -117,14 +120,42 @@ export class GameScene extends Phaser.Scene {
     this.controls = createControls(this);
     this.startIdleAnimation();
     this.updateHud();
+    this.setGameOverOverlay(false);
+
+    this.retryHandler = () => {
+      this.physics.resume();
+      this.scene.restart();
+    };
+
+    document.querySelector<HTMLButtonElement>("#retry-button")?.addEventListener("click", this.retryHandler);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.spawnTimer?.destroy();
+      document.querySelector<HTMLButtonElement>("#retry-button")?.removeEventListener("click", this.retryHandler!);
+      this.setGameOverOverlay(false);
       this.worldTheme.destroy();
     });
   }
 
+  private resetState(): void {
+    this.enemies = [];
+    this.isMoving = false;
+    this.isGameOver = false;
+    this.redSorted = 0;
+    this.greenSorted = 0;
+    this.mistakesRemaining = 5;
+    this.idleTween = undefined;
+    this.moveTween = undefined;
+    this.spawnTimer = undefined;
+    this.retryHandler = undefined;
+    this.facing.set(1, 0);
+  }
+
   update(): void {
+    if (this.isGameOver) {
+      return;
+    }
+
     const movement = getMovementVector(this.controls.cursors, this.controls.wasd);
     this.updatePlayerMovement(movement);
     this.updateFacing(movement);
@@ -222,7 +253,13 @@ export class GameScene extends Phaser.Scene {
         this.greenSorted += 1;
       }
     } else {
-      this.mistakes += 1;
+      if (this.mistakesRemaining === 0) {
+        enemy.destroy();
+        this.endGame();
+        return;
+      }
+
+      this.mistakesRemaining -= 1;
     }
 
     enemy.destroy();
@@ -335,20 +372,36 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateHud(): void {
-    const label = document.querySelector<HTMLElement>(".hud-label");
-    const instructions = document.querySelector<HTMLElement>(".hud-instructions");
-    const status = document.querySelector<HTMLElement>("#hud-status");
+    const redScore = document.querySelector<HTMLElement>("#hud-red");
+    const mistakes = document.querySelector<HTMLElement>("#hud-mistakes");
+    const greenScore = document.querySelector<HTMLElement>("#hud-green");
 
-    if (label) {
-      label.textContent = "Gatekeeper";
+    if (redScore) {
+      redScore.textContent = String(this.redSorted);
     }
 
-    if (instructions) {
-      instructions.textContent = "Guard the infernal ledge. Bump red skeletons left and green skeletons right.";
+    if (mistakes) {
+      mistakes.textContent = String(this.mistakesRemaining);
     }
 
-    if (status) {
-      status.textContent = `Red sorted: ${this.redSorted} | Green sorted: ${this.greenSorted} | Mistakes: ${this.mistakes}`;
+    if (greenScore) {
+      greenScore.textContent = String(this.greenSorted);
+    }
+  }
+
+  private endGame(): void {
+    this.isGameOver = true;
+    this.spawnTimer?.remove(false);
+    this.player.setVelocity(0, 0);
+    this.physics.pause();
+    this.setGameOverOverlay(true);
+  }
+
+  private setGameOverOverlay(isVisible: boolean): void {
+    const overlay = document.querySelector<HTMLElement>("#game-over");
+
+    if (overlay) {
+      overlay.hidden = !isVisible;
     }
   }
 

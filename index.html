@@ -8,10 +8,15 @@
   <body>
     <div id="app-shell">
       <div id="app"></div>
-      <div id="hud" aria-live="polite">
-        <p class="hud-label">Jump</p>
-        <p class="hud-instructions">Arrow keys to move, up to jump</p>
-        <p id="hud-status" class="hud-status"></p>
+      <div id="hud-red" class="hud-score" aria-live="polite"></div>
+      <div id="hud-mistakes" class="hud-score" aria-live="polite"></div>
+      <div id="hud-green" class="hud-score" aria-live="polite"></div>
+      <div id="game-over" class="game-overlay" hidden>
+        <div class="game-dialog">
+          <p class="game-dialog-label">Gate Closed</p>
+          <p class="game-dialog-text">Too many souls slipped through. Hold the line again.</p>
+          <button id="retry-button" class="game-dialog-button" type="button">Retry</button>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
