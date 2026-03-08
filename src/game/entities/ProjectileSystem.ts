@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { BULLET_CULL_MARGIN, BULLET_SPEED } from "../config";
-import { createRectTexture } from "../render/createRectTexture";
+import { createSlimeDropletTexture } from "../render/createSlimeDropletTexture";
 
 export class ProjectileSystem {
   private readonly bullets: Phaser.Physics.Arcade.Group;
@@ -16,17 +16,34 @@ export class ProjectileSystem {
   }
 
   fire(from: Phaser.Math.Vector2, direction: Phaser.Math.Vector2): void {
+    const dropletDirection = direction.clone().normalize();
+    const spawnOffset = new Phaser.Math.Vector2(dropletDirection.x * 18, dropletDirection.y * 18);
+
+    if (Math.abs(dropletDirection.x) > Math.abs(dropletDirection.y)) {
+      spawnOffset.y += 6;
+    }
+
     const bullet = this.bullets.create(
-      from.x + direction.x * 30,
-      from.y + direction.y * 30,
-      createRectTexture(this.scene, "bullet", 16, 16, 0xa8dadc)
+      from.x + spawnOffset.x,
+      from.y + spawnOffset.y,
+      createSlimeDropletTexture(this.scene, "slime-bullet", 20)
     ) as Phaser.Physics.Arcade.Sprite;
 
     bullet.setDepth(1);
     const body = bullet.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
+    body.setCircle(8, 2, 2);
     bullet.setCollideWorldBounds(false);
-    bullet.setVelocity(direction.x * BULLET_SPEED, direction.y * BULLET_SPEED);
+    bullet.setScale(0.72);
+    bullet.setVelocity(dropletDirection.x * BULLET_SPEED, dropletDirection.y * BULLET_SPEED);
+
+    this.scene.tweens.add({
+      targets: bullet,
+      scaleX: 1,
+      scaleY: 0.82,
+      duration: 90,
+      ease: "Quad.Out"
+    });
   }
 
   update(): void {

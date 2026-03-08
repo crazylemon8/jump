@@ -56,7 +56,7 @@ export class GameScene extends Phaser.Scene {
 
   update(): void {
     const movement = getMovementVector(this.controls.cursors, this.controls.wasd);
-    const velocity = movement.clone().scale(PLAYER_SPEED);
+    const velocity = movement.clone().normalize().scale(PLAYER_SPEED);
 
     this.player.setVelocity(velocity.x, velocity.y);
     this.updateFacing(movement);
