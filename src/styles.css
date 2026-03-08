@@ -115,6 +115,13 @@ canvas {
   line-height: 1.4;
 }
 
+.game-dialog-score {
+  margin: 14px 0 0;
+  color: #ffd9b3;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
 .game-countdown {
   margin: 18px 0 0;
   color: #ffd27d;

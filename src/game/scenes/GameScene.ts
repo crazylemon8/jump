@@ -416,6 +416,7 @@ export class GameScene extends Phaser.Scene {
     this.spawnTimer?.remove(false);
     this.player.setVelocity(0, 0);
     this.physics.pause();
+    this.updateFinalScore();
     this.setGameOverOverlay(true);
   }
 
@@ -424,6 +425,14 @@ export class GameScene extends Phaser.Scene {
 
     if (overlay) {
       overlay.hidden = !isVisible;
+    }
+  }
+
+  private updateFinalScore(): void {
+    const finalScore = document.querySelector<HTMLElement>("#final-score");
+
+    if (finalScore) {
+      finalScore.textContent = `Final score: ${this.redSorted + this.greenSorted}  |  Red: ${this.redSorted}  |  Green: ${this.greenSorted}`;
     }
   }
 
