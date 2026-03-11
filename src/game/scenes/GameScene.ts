@@ -37,6 +37,8 @@ export class GameScene extends Phaser.Scene {
   private isRoundActive = false;
   private retryHandler?: () => void;
   private startHandler?: (event: KeyboardEvent) => void;
+  private pauseButtonHandler?: () => void;
+  private resumeHandler?: (event: KeyboardEvent) => void;
   private blurHandler?: () => void;
   private visibilityHandler?: () => void;
   private facing = new Phaser.Math.Vector2(1, 0);
@@ -138,6 +140,14 @@ export class GameScene extends Phaser.Scene {
     this.startHandler = () => {
       this.beginRound();
     };
+    this.pauseButtonHandler = () => {
+      this.togglePause();
+    };
+    this.resumeHandler = () => {
+      if (this.isPaused) {
+        this.resumeGame();
+      }
+    };
     this.blurHandler = () => {
       this.pauseGame();
     };
@@ -148,15 +158,21 @@ export class GameScene extends Phaser.Scene {
     };
 
     document.querySelector<HTMLButtonElement>("#retry-button")?.addEventListener("click", this.retryHandler);
+    document.querySelector<HTMLButtonElement>("#pause-button")?.addEventListener("click", this.pauseButtonHandler);
     window.addEventListener("keydown", this.startHandler, { once: true });
+    window.addEventListener("keydown", this.resumeHandler);
     window.addEventListener("blur", this.blurHandler);
     document.addEventListener("visibilitychange", this.visibilityHandler);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.spawnTimer?.destroy();
       document.querySelector<HTMLButtonElement>("#retry-button")?.removeEventListener("click", this.retryHandler!);
+      document.querySelector<HTMLButtonElement>("#pause-button")?.removeEventListener("click", this.pauseButtonHandler!);
       if (this.startHandler) {
         window.removeEventListener("keydown", this.startHandler);
+      }
+      if (this.resumeHandler) {
+        window.removeEventListener("keydown", this.resumeHandler);
       }
       if (this.blurHandler) {
         window.removeEventListener("blur", this.blurHandler);
@@ -184,6 +200,8 @@ export class GameScene extends Phaser.Scene {
     this.spawnTimer = undefined;
     this.retryHandler = undefined;
     this.startHandler = undefined;
+    this.pauseButtonHandler = undefined;
+    this.resumeHandler = undefined;
     this.blurHandler = undefined;
     this.visibilityHandler = undefined;
     this.isRoundActive = false;
