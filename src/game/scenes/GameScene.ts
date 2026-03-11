@@ -7,6 +7,11 @@ import { createRectTexture } from "../render/createRectTexture";
 import { createDefaultWorldTheme, type WorldTheme } from "../world/themes";
 
 export class GameScene extends Phaser.Scene {
+  private static readonly SPEED_STEP_INTERVAL = 20;
+  private static readonly SPEED_STEP_AMOUNT = 0.08;
+  private static readonly SPAWN_DELAY_BASE = 1600;
+  private static readonly SPAWN_DELAY_STEP = 70;
+  private static readonly SPAWN_DELAY_MIN = 780;
   private static readonly PLAYER_TEXTURE_WIDTH = 108;
   private static readonly PLAYER_TEXTURE_HEIGHT = 80;
   private static readonly PLAYER_DISPLAY_WIDTH = 54;
@@ -45,6 +50,7 @@ export class GameScene extends Phaser.Scene {
   private redSorted = 0;
   private greenSorted = 0;
   private mistakesRemaining = 5;
+  private resolvedSkeletons = 0;
 
   constructor() {
     super("game");
@@ -60,14 +66,7 @@ export class GameScene extends Phaser.Scene {
     this.createGoalMarkers();
 
     this.enemyGroup = this.physics.add.group();
-    this.spawnTimer = this.time.addEvent({
-      delay: 1600,
-      loop: true,
-      callback: () => {
-        this.spawnSkeleton();
-      },
-      paused: true
-    });
+    this.configureSpawnTimer(true);
 
     this.player = this.physics.add
       .sprite(GameScene.PLAYER_SPAWN_X, GameScene.PLAYER_SPAWN_Y, this.getSlimeTexture("right"))
@@ -195,6 +194,7 @@ export class GameScene extends Phaser.Scene {
     this.redSorted = 0;
     this.greenSorted = 0;
     this.mistakesRemaining = 5;
+    this.resolvedSkeletons = 0;
     this.idleTween = undefined;
     this.moveTween = undefined;
     this.spawnTimer = undefined;
@@ -297,9 +297,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateEnemies(): void {
+    const speedMultiplier = this.getSkeletonSpeedMultiplier();
+
     for (let index = this.enemies.length - 1; index >= 0; index -= 1) {
       const enemy = this.enemies[index];
-      enemy.update();
+      enemy.update(speedMultiplier);
 
       const exitSide = enemy.getExitSide();
 
@@ -313,6 +315,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleEnemyExit(enemy: SortingSkeleton, exitSide: ExitSide): void {
+    this.resolvedSkeletons += 1;
+
     const color = enemy.skeletonColor;
     const isCorrect =
       (color === "red" && exitSide === "left") || (color === "green" && exitSide === "right");
@@ -334,6 +338,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     enemy.destroy();
+    this.refreshSpawnRate();
     this.updateHud();
   }
 
@@ -460,6 +465,18 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private getSkeletonSpeedMultiplier(): number {
+    const speedSteps = Math.floor(this.resolvedSkeletons / GameScene.SPEED_STEP_INTERVAL);
+
+    return 1 + speedSteps * GameScene.SPEED_STEP_AMOUNT;
+  }
+
+  private getSpawnDelay(): number {
+    const speedSteps = Math.floor(this.resolvedSkeletons / GameScene.SPEED_STEP_INTERVAL);
+
+    return Math.max(GameScene.SPAWN_DELAY_MIN, GameScene.SPAWN_DELAY_BASE - speedSteps * GameScene.SPAWN_DELAY_STEP);
+  }
+
   private endGame(): void {
     this.isGameOver = true;
     this.isRoundActive = false;
@@ -511,14 +528,7 @@ export class GameScene extends Phaser.Scene {
 
     this.isRoundActive = true;
     this.isPaused = false;
-    this.spawnTimer?.reset({
-      delay: 1600,
-      loop: true,
-      callback: () => {
-        this.spawnSkeleton();
-      },
-      paused: false
-    });
+    this.configureSpawnTimer(false);
     this.setStartOverlay(false);
   }
 
@@ -571,5 +581,25 @@ export class GameScene extends Phaser.Scene {
       0x9be564,
       direction
     );
+  }
+
+  private configureSpawnTimer(paused: boolean): void {
+    this.spawnTimer?.destroy();
+    this.spawnTimer = this.time.addEvent({
+      delay: this.getSpawnDelay(),
+      loop: true,
+      callback: () => {
+        this.spawnSkeleton();
+      },
+      paused
+    });
+  }
+
+  private refreshSpawnRate(): void {
+    if (!this.spawnTimer || this.isGameOver) {
+      return;
+    }
+
+    this.configureSpawnTimer(this.isPaused || !this.isRoundActive);
   }
 }

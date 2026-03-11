@@ -6,6 +6,9 @@ export type SkeletonColor = "red" | "green";
 export type ExitSide = "left" | "right";
 
 export class SortingSkeleton {
+  private static readonly GROUNDED_SPEED = 72;
+  private static readonly AIRBORNE_SPEED = 44;
+  private static readonly REDIRECT_SPEED = 165;
   private readonly shadow: Phaser.GameObjects.Ellipse;
   private readonly sprite: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private direction: -1 | 1;
@@ -42,15 +45,15 @@ export class SortingSkeleton {
     return this.direction;
   }
 
-  update(): void {
+  update(speedMultiplier = 1): void {
     if (!this.sprite.active) {
       return;
     }
 
     if (this.sprite.body.blocked.down || this.sprite.body.touching.down) {
-      this.sprite.setVelocityX(this.direction * 72);
+      this.sprite.setVelocityX(this.direction * SortingSkeleton.GROUNDED_SPEED * speedMultiplier);
     } else {
-      this.sprite.setVelocityX(this.direction * 44);
+      this.sprite.setVelocityX(this.direction * SortingSkeleton.AIRBORNE_SPEED * speedMultiplier);
     }
 
     this.shadow.x = this.sprite.x;
@@ -68,7 +71,7 @@ export class SortingSkeleton {
     this.directionLockUntil = time + 220;
 
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
-    body.velocity.x = this.direction * 165;
+    body.velocity.x = this.direction * SortingSkeleton.REDIRECT_SPEED;
     body.velocity.y = Math.min(body.velocity.y, -120);
   }
 
