@@ -33,9 +33,12 @@ export class GameScene extends Phaser.Scene {
   private spawnTimer?: Phaser.Time.TimerEvent;
   private isMoving = false;
   private isGameOver = false;
+  private isPaused = false;
   private isRoundActive = false;
   private retryHandler?: () => void;
   private startHandler?: (event: KeyboardEvent) => void;
+  private blurHandler?: () => void;
+  private visibilityHandler?: () => void;
   private facing = new Phaser.Math.Vector2(1, 0);
   private redSorted = 0;
   private greenSorted = 0;
@@ -124,6 +127,7 @@ export class GameScene extends Phaser.Scene {
     this.startIdleAnimation();
     this.updateHud();
     this.setGameOverOverlay(false);
+    this.setPauseOverlay(false);
     this.setStartOverlay(true);
 
     this.retryHandler = () => {
@@ -134,9 +138,19 @@ export class GameScene extends Phaser.Scene {
     this.startHandler = () => {
       this.beginRound();
     };
+    this.blurHandler = () => {
+      this.pauseGame();
+    };
+    this.visibilityHandler = () => {
+      if (document.hidden) {
+        this.pauseGame();
+      }
+    };
 
     document.querySelector<HTMLButtonElement>("#retry-button")?.addEventListener("click", this.retryHandler);
     window.addEventListener("keydown", this.startHandler, { once: true });
+    window.addEventListener("blur", this.blurHandler);
+    document.addEventListener("visibilitychange", this.visibilityHandler);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.spawnTimer?.destroy();
@@ -144,7 +158,14 @@ export class GameScene extends Phaser.Scene {
       if (this.startHandler) {
         window.removeEventListener("keydown", this.startHandler);
       }
+      if (this.blurHandler) {
+        window.removeEventListener("blur", this.blurHandler);
+      }
+      if (this.visibilityHandler) {
+        document.removeEventListener("visibilitychange", this.visibilityHandler);
+      }
       this.setGameOverOverlay(false);
+      this.setPauseOverlay(false);
       this.setStartOverlay(false);
       this.worldTheme.destroy();
     });
@@ -154,6 +175,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.isMoving = false;
     this.isGameOver = false;
+    this.isPaused = false;
     this.redSorted = 0;
     this.greenSorted = 0;
     this.mistakesRemaining = 5;
@@ -162,12 +184,22 @@ export class GameScene extends Phaser.Scene {
     this.spawnTimer = undefined;
     this.retryHandler = undefined;
     this.startHandler = undefined;
+    this.blurHandler = undefined;
+    this.visibilityHandler = undefined;
     this.isRoundActive = false;
     this.facing.set(1, 0);
   }
 
   update(): void {
+    if (Phaser.Input.Keyboard.JustDown(this.controls.pause)) {
+      this.togglePause();
+    }
+
     if (this.isGameOver) {
+      return;
+    }
+
+    if (this.isPaused) {
       return;
     }
 
@@ -413,15 +445,25 @@ export class GameScene extends Phaser.Scene {
   private endGame(): void {
     this.isGameOver = true;
     this.isRoundActive = false;
+    this.isPaused = false;
     this.spawnTimer?.remove(false);
     this.player.setVelocity(0, 0);
     this.physics.pause();
+    this.setPauseOverlay(false);
     this.updateFinalScore();
     this.setGameOverOverlay(true);
   }
 
   private setGameOverOverlay(isVisible: boolean): void {
     const overlay = document.querySelector<HTMLElement>("#game-over");
+
+    if (overlay) {
+      overlay.hidden = !isVisible;
+    }
+  }
+
+  private setPauseOverlay(isVisible: boolean): void {
+    const overlay = document.querySelector<HTMLElement>("#game-pause");
 
     if (overlay) {
       overlay.hidden = !isVisible;
@@ -450,6 +492,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.isRoundActive = true;
+    this.isPaused = false;
     this.spawnTimer?.reset({
       delay: 1600,
       loop: true,
@@ -459,6 +502,46 @@ export class GameScene extends Phaser.Scene {
       paused: false
     });
     this.setStartOverlay(false);
+  }
+
+  private togglePause(): void {
+    if (!this.isRoundActive || this.isGameOver) {
+      return;
+    }
+
+    if (this.isPaused) {
+      this.resumeGame();
+      return;
+    }
+
+    this.pauseGame();
+  }
+
+  private pauseGame(): void {
+    if (!this.isRoundActive || this.isGameOver || this.isPaused) {
+      return;
+    }
+
+    this.isPaused = true;
+    this.player.setVelocity(0, 0);
+    if (this.spawnTimer) {
+      this.spawnTimer.paused = true;
+    }
+    this.physics.pause();
+    this.setPauseOverlay(true);
+  }
+
+  private resumeGame(): void {
+    if (!this.isRoundActive || this.isGameOver || !this.isPaused) {
+      return;
+    }
+
+    this.isPaused = false;
+    this.physics.resume();
+    if (this.spawnTimer) {
+      this.spawnTimer.paused = false;
+    }
+    this.setPauseOverlay(false);
   }
 
   private getSlimeTexture(direction: SlimeDirection): string {

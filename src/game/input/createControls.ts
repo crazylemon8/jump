@@ -6,6 +6,7 @@ export interface Controls {
   cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   wasd: MovementKeys;
   shoot: Phaser.Input.Keyboard.Key;
+  pause: Phaser.Input.Keyboard.Key;
 }
 
 export function createControls(scene: Phaser.Scene): Controls {
@@ -27,7 +28,8 @@ export function createControls(scene: Phaser.Scene): Controls {
       s: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       d: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
     },
-    shoot: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+    shoot: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+    pause: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
   };
 }
 
