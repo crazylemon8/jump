@@ -7,11 +7,15 @@ import { createRectTexture } from "../render/createRectTexture";
 import { createDefaultWorldTheme, type WorldTheme } from "../world/themes";
 
 export class GameScene extends Phaser.Scene {
-  private static readonly SPEED_STEP_INTERVAL = 20;
-  private static readonly SPEED_STEP_AMOUNT = 0.08;
+  private static readonly SPEED_STEP_INTERVAL = 10;
+  private static readonly SPEED_STEP_AMOUNT = 0.16;
   private static readonly SPAWN_DELAY_BASE = 1600;
   private static readonly SPAWN_DELAY_STEP = 70;
   private static readonly SPAWN_DELAY_MIN = 780;
+  private static readonly SPEED_POWER_MAX = 100;
+  private static readonly SPEED_POWER_DRAIN_PER_SECOND = 34;
+  private static readonly SPEED_POWER_RECOVER_PER_SECOND = 10;
+  private static readonly SPRINT_SPEED_MULTIPLIER = 1.75;
   private static readonly PLAYER_TEXTURE_WIDTH = 108;
   private static readonly PLAYER_TEXTURE_HEIGHT = 80;
   private static readonly PLAYER_DISPLAY_WIDTH = 54;
@@ -51,6 +55,8 @@ export class GameScene extends Phaser.Scene {
   private greenSorted = 0;
   private mistakesRemaining = 5;
   private resolvedSkeletons = 0;
+  private speedPower = GameScene.SPEED_POWER_MAX;
+  private isSprintActive = false;
 
   constructor() {
     super("game");
@@ -76,7 +82,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setOffset(33, 26);
     this.player.setBounce(0);
     this.player.setDragX(1400);
-    this.player.setMaxVelocity(PLAYER_SPEED, 900);
+    this.player.setMaxVelocity(PLAYER_SPEED * GameScene.SPRINT_SPEED_MULTIPLIER, 900);
 
     this.physics.add.collider(this.player, this.floor);
     this.physics.add.collider(this.enemyGroup, this.floor);
@@ -105,7 +111,7 @@ export class GameScene extends Phaser.Scene {
           return;
         }
 
-        enemy.redirectFromPlayer(this.player.x, this.time.now);
+        enemy.redirectFromPlayer(this.player.x, this.time.now, this.getSkeletonSpeedMultiplier());
         const body = this.player.body as Phaser.Physics.Arcade.Body;
         body.velocity.x += enemy.gameObject.x < this.player.x ? 40 : -40;
       },
@@ -127,6 +133,7 @@ export class GameScene extends Phaser.Scene {
     this.controls = createControls(this);
     this.startIdleAnimation();
     this.updateHud();
+    this.updateSpeedMeter();
     this.setGameOverOverlay(false);
     this.setPauseOverlay(false);
     this.setStartOverlay(true);
@@ -195,6 +202,8 @@ export class GameScene extends Phaser.Scene {
     this.greenSorted = 0;
     this.mistakesRemaining = 5;
     this.resolvedSkeletons = 0;
+    this.speedPower = GameScene.SPEED_POWER_MAX;
+    this.isSprintActive = false;
     this.idleTween = undefined;
     this.moveTween = undefined;
     this.spawnTimer = undefined;
@@ -208,7 +217,7 @@ export class GameScene extends Phaser.Scene {
     this.facing.set(1, 0);
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.controls.pause)) {
       this.togglePause();
     }
@@ -223,9 +232,11 @@ export class GameScene extends Phaser.Scene {
 
     const movement = getMovementVector(this.controls.cursors, this.controls.wasd);
     if (this.isRoundActive) {
-      this.updatePlayerMovement(movement);
+      this.updatePlayerMovement(movement, delta);
     } else {
+      this.isSprintActive = false;
       this.player.setVelocity(0, 0);
+      this.recoverSpeedPower(delta);
     }
     this.updateFacing(movement);
     this.updateMoveAnimation(Math.abs(this.player.body.velocity.x) > 8);
@@ -286,10 +297,30 @@ export class GameScene extends Phaser.Scene {
     this.enemyGroup.add(enemy.gameObject);
   }
 
-  private updatePlayerMovement(movement: Phaser.Math.Vector2): void {
+  private updatePlayerMovement(movement: Phaser.Math.Vector2, delta: number): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     const horizontal = Phaser.Math.Clamp(movement.x, -1, 1);
-    this.player.setVelocityX(horizontal * PLAYER_SPEED);
+    const isTryingToSprint = horizontal !== 0 && this.controls.sprint.isDown && this.speedPower > 0;
+    this.isSprintActive = isTryingToSprint;
+
+    if (this.isSprintActive) {
+      this.speedPower = Math.max(
+        0,
+        this.speedPower - (GameScene.SPEED_POWER_DRAIN_PER_SECOND * delta) / 1000
+      );
+
+      if (this.speedPower === 0) {
+        this.isSprintActive = false;
+      }
+    } else {
+      this.recoverSpeedPower(delta);
+    }
+
+    const horizontalSpeed =
+      PLAYER_SPEED * (this.isSprintActive ? GameScene.SPRINT_SPEED_MULTIPLIER : 1);
+
+    this.player.setVelocityX(horizontal * horizontalSpeed);
+    this.updateSpeedMeter();
 
     if (movement.y < 0 && body.blocked.down) {
       this.player.setVelocityY(-520);
@@ -465,6 +496,18 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private updateSpeedMeter(): void {
+    const fill = document.querySelector<HTMLElement>("#hud-speed-fill");
+
+    if (!fill) {
+      return;
+    }
+
+    const ratio = Phaser.Math.Clamp(this.speedPower / GameScene.SPEED_POWER_MAX, 0, 1);
+    fill.style.transform = `scaleX(${ratio})`;
+    fill.style.opacity = this.isSprintActive ? "1" : "0.88";
+  }
+
   private getSkeletonSpeedMultiplier(): number {
     const speedSteps = Math.floor(this.resolvedSkeletons / GameScene.SPEED_STEP_INTERVAL);
 
@@ -475,6 +518,14 @@ export class GameScene extends Phaser.Scene {
     const speedSteps = Math.floor(this.resolvedSkeletons / GameScene.SPEED_STEP_INTERVAL);
 
     return Math.max(GameScene.SPAWN_DELAY_MIN, GameScene.SPAWN_DELAY_BASE - speedSteps * GameScene.SPAWN_DELAY_STEP);
+  }
+
+  private recoverSpeedPower(delta: number): void {
+    this.speedPower = Math.min(
+      GameScene.SPEED_POWER_MAX,
+      this.speedPower + (GameScene.SPEED_POWER_RECOVER_PER_SECOND * delta) / 1000
+    );
+    this.updateSpeedMeter();
   }
 
   private endGame(): void {

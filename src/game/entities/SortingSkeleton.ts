@@ -62,7 +62,7 @@ export class SortingSkeleton {
     this.sprite.setFlipX(this.direction < 0);
   }
 
-  redirectFromPlayer(playerX: number, time: number): void {
+  redirectFromPlayer(playerX: number, time: number, speedMultiplier = 1): void {
     if (!this.sprite.active || time < this.directionLockUntil) {
       return;
     }
@@ -71,7 +71,7 @@ export class SortingSkeleton {
     this.directionLockUntil = time + 220;
 
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
-    body.velocity.x = this.direction * SortingSkeleton.REDIRECT_SPEED;
+    body.velocity.x = this.direction * SortingSkeleton.REDIRECT_SPEED * speedMultiplier;
     body.velocity.y = Math.min(body.velocity.y, -120);
   }
 
