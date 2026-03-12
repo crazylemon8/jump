@@ -179,6 +179,42 @@ canvas {
   text-align: center;
 }
 
+.start-illustrations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.start-card {
+  padding: 12px 10px 10px;
+  border: 1px solid rgba(255, 143, 76, 0.16);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(50, 10, 13, 0.9) 0%, rgba(26, 7, 10, 0.92) 100%);
+}
+
+.start-card-red {
+  box-shadow: inset 0 0 0 1px rgba(255, 91, 91, 0.08);
+}
+
+.start-card-green {
+  box-shadow: inset 0 0 0 1px rgba(103, 226, 125, 0.08);
+}
+
+.start-illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.start-card-label {
+  margin: 6px 0 0;
+  color: #f9dfd1;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
 .game-dialog-label,
 .game-dialog-text {
   margin: 0;
@@ -224,4 +260,10 @@ canvas {
   font: inherit;
   font-weight: 800;
   cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .start-illustrations {
+    grid-template-columns: 1fr;
+  }
 }
