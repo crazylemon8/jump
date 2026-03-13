@@ -46,10 +46,13 @@ export class GameScene extends Phaser.Scene {
   private isRoundActive = false;
   private retryHandler?: () => void;
   private startHandler?: (event: KeyboardEvent) => void;
+  private startPointerHandler?: () => void;
   private pauseButtonHandler?: () => void;
   private resumeHandler?: (event: KeyboardEvent) => void;
+  private pausePointerHandler?: () => void;
   private blurHandler?: () => void;
   private visibilityHandler?: () => void;
+  private mobileCleanupHandlers: Array<() => void> = [];
   private facing = new Phaser.Math.Vector2(1, 0);
   private redSorted = 0;
   private greenSorted = 0;
@@ -57,6 +60,11 @@ export class GameScene extends Phaser.Scene {
   private resolvedSkeletons = 0;
   private speedPower = GameScene.SPEED_POWER_MAX;
   private isSprintActive = false;
+  private mobileInput = {
+    x: 0,
+    y: 0,
+    sprint: false
+  };
 
   constructor() {
     super("game");
@@ -146,10 +154,18 @@ export class GameScene extends Phaser.Scene {
     this.startHandler = () => {
       this.beginRound();
     };
+    this.startPointerHandler = () => {
+      this.beginRound();
+    };
     this.pauseButtonHandler = () => {
       this.togglePause();
     };
     this.resumeHandler = () => {
+      if (this.isPaused) {
+        this.resumeGame();
+      }
+    };
+    this.pausePointerHandler = () => {
       if (this.isPaused) {
         this.resumeGame();
       }
@@ -165,15 +181,20 @@ export class GameScene extends Phaser.Scene {
 
     document.querySelector<HTMLButtonElement>("#retry-button")?.addEventListener("click", this.retryHandler);
     document.querySelector<HTMLButtonElement>("#pause-button")?.addEventListener("click", this.pauseButtonHandler);
+    document.querySelector<HTMLElement>("#game-start")?.addEventListener("pointerdown", this.startPointerHandler);
+    document.querySelector<HTMLElement>("#game-pause")?.addEventListener("pointerdown", this.pausePointerHandler);
     window.addEventListener("keydown", this.startHandler, { once: true });
     window.addEventListener("keydown", this.resumeHandler);
     window.addEventListener("blur", this.blurHandler);
     document.addEventListener("visibilitychange", this.visibilityHandler);
+    this.bindMobileControls();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.spawnTimer?.destroy();
       document.querySelector<HTMLButtonElement>("#retry-button")?.removeEventListener("click", this.retryHandler!);
       document.querySelector<HTMLButtonElement>("#pause-button")?.removeEventListener("click", this.pauseButtonHandler!);
+      document.querySelector<HTMLElement>("#game-start")?.removeEventListener("pointerdown", this.startPointerHandler!);
+      document.querySelector<HTMLElement>("#game-pause")?.removeEventListener("pointerdown", this.pausePointerHandler!);
       if (this.startHandler) {
         window.removeEventListener("keydown", this.startHandler);
       }
@@ -185,6 +206,9 @@ export class GameScene extends Phaser.Scene {
       }
       if (this.visibilityHandler) {
         document.removeEventListener("visibilitychange", this.visibilityHandler);
+      }
+      for (const cleanup of this.mobileCleanupHandlers) {
+        cleanup();
       }
       this.setGameOverOverlay(false);
       this.setPauseOverlay(false);
@@ -209,12 +233,18 @@ export class GameScene extends Phaser.Scene {
     this.spawnTimer = undefined;
     this.retryHandler = undefined;
     this.startHandler = undefined;
+    this.startPointerHandler = undefined;
     this.pauseButtonHandler = undefined;
     this.resumeHandler = undefined;
+    this.pausePointerHandler = undefined;
     this.blurHandler = undefined;
     this.visibilityHandler = undefined;
+    this.mobileCleanupHandlers = [];
     this.isRoundActive = false;
     this.facing.set(1, 0);
+    this.mobileInput.x = 0;
+    this.mobileInput.y = 0;
+    this.mobileInput.sprint = false;
   }
 
   update(_time: number, delta: number): void {
@@ -230,7 +260,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const movement = getMovementVector(this.controls.cursors, this.controls.wasd);
+    const movement = this.getMovementInput();
     if (this.isRoundActive) {
       this.updatePlayerMovement(movement, delta);
     } else {
@@ -297,10 +327,23 @@ export class GameScene extends Phaser.Scene {
     this.enemyGroup.add(enemy.gameObject);
   }
 
+  private getMovementInput(): Phaser.Math.Vector2 {
+    const movement = getMovementVector(this.controls.cursors, this.controls.wasd);
+
+    movement.x += this.mobileInput.x;
+    movement.y += this.mobileInput.y;
+
+    movement.x = Phaser.Math.Clamp(movement.x, -1, 1);
+    movement.y = Phaser.Math.Clamp(movement.y, -1, 1);
+
+    return movement;
+  }
+
   private updatePlayerMovement(movement: Phaser.Math.Vector2, delta: number): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     const horizontal = Phaser.Math.Clamp(movement.x, -1, 1);
-    const isTryingToSprint = horizontal !== 0 && this.controls.sprint.isDown && this.speedPower > 0;
+    const isTryingToSprint =
+      horizontal !== 0 && (this.controls.sprint.isDown || this.mobileInput.sprint) && this.speedPower > 0;
     this.isSprintActive = isTryingToSprint;
 
     if (this.isSprintActive) {
@@ -518,6 +561,118 @@ export class GameScene extends Phaser.Scene {
     const speedSteps = Math.floor(this.resolvedSkeletons / GameScene.SPEED_STEP_INTERVAL);
 
     return Math.max(GameScene.SPAWN_DELAY_MIN, GameScene.SPAWN_DELAY_BASE - speedSteps * GameScene.SPAWN_DELAY_STEP);
+  }
+
+  private bindMobileControls(): void {
+    this.bindMobileJoystick();
+    this.bindMobileButton("#mobile-sprint", "sprint");
+  }
+
+  private bindMobileButton(selector: string, key: "sprint"): void {
+    const element = document.querySelector<HTMLElement>(selector);
+
+    if (!element) {
+      return;
+    }
+
+    const press = (event: Event) => {
+      event.preventDefault();
+      this.mobileInput[key] = true;
+    };
+    const release = (event: Event) => {
+      event.preventDefault();
+      this.mobileInput[key] = false;
+    };
+
+    element.addEventListener("pointerdown", press);
+    element.addEventListener("pointerup", release);
+    element.addEventListener("pointerleave", release);
+    element.addEventListener("pointercancel", release);
+
+    this.mobileCleanupHandlers.push(() => {
+      element.removeEventListener("pointerdown", press);
+      element.removeEventListener("pointerup", release);
+      element.removeEventListener("pointerleave", release);
+      element.removeEventListener("pointercancel", release);
+    });
+  }
+
+  private bindMobileJoystick(): void {
+    const base = document.querySelector<HTMLElement>("#mobile-joystick");
+    const thumb = document.querySelector<HTMLElement>("#mobile-joystick-thumb");
+
+    if (!base || !thumb) {
+      return;
+    }
+
+    let activePointerId: number | null = null;
+
+    const updateJoystick = (clientX: number, clientY: number) => {
+      const rect = base.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const radius = rect.width * 0.34;
+      const dx = clientX - centerX;
+      const dy = clientY - centerY;
+      const distance = Math.hypot(dx, dy);
+      const clampedDistance = Math.min(distance, radius);
+      const angle = Math.atan2(dy, dx);
+      const knobX = Math.cos(angle) * clampedDistance;
+      const knobY = Math.sin(angle) * clampedDistance;
+      const normalizedDistance = radius === 0 ? 0 : clampedDistance / radius;
+
+      thumb.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
+      this.mobileInput.x = Math.abs(knobX) < 4 ? 0 : Math.cos(angle) * normalizedDistance;
+      this.mobileInput.y = Math.abs(knobY) < 4 ? 0 : Math.sin(angle) * normalizedDistance;
+    };
+
+    const resetJoystick = () => {
+      activePointerId = null;
+      thumb.style.transform = "translate(-50%, -50%)";
+      this.mobileInput.x = 0;
+      this.mobileInput.y = 0;
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      event.preventDefault();
+      activePointerId = event.pointerId;
+      base.setPointerCapture(event.pointerId);
+      updateJoystick(event.clientX, event.clientY);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (activePointerId !== event.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+      updateJoystick(event.clientX, event.clientY);
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      if (activePointerId !== event.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+      if (base.hasPointerCapture(event.pointerId)) {
+        base.releasePointerCapture(event.pointerId);
+      }
+      resetJoystick();
+    };
+
+    base.addEventListener("pointerdown", onPointerDown);
+    base.addEventListener("pointermove", onPointerMove);
+    base.addEventListener("pointerup", onPointerUp);
+    base.addEventListener("pointercancel", onPointerUp);
+
+    this.mobileCleanupHandlers.push(() => {
+      base.removeEventListener("pointerdown", onPointerDown);
+      base.removeEventListener("pointermove", onPointerMove);
+      base.removeEventListener("pointerup", onPointerUp);
+      base.removeEventListener("pointercancel", onPointerUp);
+      resetJoystick();
+    });
   }
 
   private recoverSpeedPower(delta: number): void {

@@ -23,6 +23,12 @@
       <div id="hud-pause" class="hud-pause">
         <button id="pause-button" class="hud-pause-button" type="button">Pause</button>
       </div>
+      <div id="mobile-controls" class="mobile-controls" aria-label="Touch controls">
+        <div id="mobile-joystick" class="mobile-joystick" aria-label="Movement joystick">
+          <div id="mobile-joystick-thumb" class="mobile-joystick-thumb"></div>
+        </div>
+        <button id="mobile-sprint" class="mobile-control-button mobile-control-button-accent" type="button" aria-label="Sprint">Sprint</button>
+      </div>
       <div id="game-start" class="game-overlay">
         <div class="game-dialog">
           <p class="game-dialog-label">Gatekeeper Briefing</p>
@@ -71,13 +77,13 @@
           <p class="game-dialog-text">
             Red skeletons must fall left. Green skeletons must fall right. Hold the ledge and sort the dead.
           </p>
-          <p class="game-countdown">Press any key to start</p>
+          <p class="game-countdown">Press any key or tap to start</p>
         </div>
       </div>
       <div id="game-pause" class="game-overlay" hidden>
         <div class="game-dialog">
           <p class="game-dialog-label">Paused</p>
-          <p class="game-dialog-text">Press any key or the pause button to resume guarding the gate.</p>
+          <p class="game-dialog-text">Press any key, tap the screen, or use the pause button to resume guarding the gate.</p>
         </div>
       </div>
       <div id="game-over" class="game-overlay" hidden>

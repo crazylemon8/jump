@@ -21,6 +21,7 @@ body,
 
 body {
   min-height: 100vh;
+  overflow: hidden;
 }
 
 #app-shell {
@@ -29,6 +30,7 @@ body {
   place-items: center;
   min-height: 100vh;
   padding: 24px;
+  touch-action: manipulation;
 }
 
 .hud-score {
@@ -150,6 +152,85 @@ body {
   background: rgba(28, 7, 11, 0.84);
 }
 
+.mobile-controls {
+  position: absolute;
+  right: 20px;
+  bottom: 24px;
+  z-index: 2;
+  display: none;
+  align-items: end;
+  gap: 14px;
+}
+
+.mobile-control-button {
+  min-width: 84px;
+  min-height: 56px;
+  border: 1px solid rgba(255, 143, 76, 0.24);
+  border-radius: 18px;
+  background: rgba(18, 4, 7, 0.78);
+  color: #fbe6d7;
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 800;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  touch-action: none;
+  user-select: none;
+}
+
+.mobile-joystick {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  border: 1px solid rgba(255, 143, 76, 0.22);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 196, 123, 0.1), transparent 40%),
+    rgba(18, 4, 7, 0.78);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  touch-action: none;
+}
+
+.mobile-joystick-thumb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255, 171, 94, 0.2);
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 171, 94, 0.24) 0%, rgba(153, 56, 26, 0.4) 100%);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  transform: translate(-50%, -50%);
+}
+
+@media (pointer: coarse) {
+  .mobile-controls {
+    display: flex;
+    right: 20px;
+    bottom: 20px;
+  }
+
+  .hud-pause {
+    right: 20px;
+    bottom: 184px;
+  }
+
+  .hud-meter {
+    left: auto;
+    right: 20px;
+    top: 72px;
+    bottom: auto;
+  }
+}
+
+.mobile-control-button-accent {
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 canvas {
   display: block;
   margin: 0 auto;
@@ -263,7 +344,80 @@ canvas {
 }
 
 @media (max-width: 560px) {
+  #app-shell {
+    padding: 12px;
+  }
+
+  .hud-score {
+    top: 14px;
+    min-width: 72px;
+    padding: 8px 10px;
+    font-size: 1.5rem;
+  }
+
+  #hud-red {
+    left: 14px;
+  }
+
+  #hud-green {
+    right: 14px;
+  }
+
+  .hud-meter {
+    left: auto;
+    right: 12px;
+    top: 64px;
+    bottom: auto;
+    width: 146px;
+    padding: 8px 10px 10px;
+  }
+
+  .hud-pause {
+    right: 12px;
+    bottom: 176px;
+  }
+
+  .hud-pause-button {
+    padding: 8px 12px;
+    font-size: 0.88rem;
+  }
+
+  .mobile-controls {
+    right: 12px;
+    bottom: 12px;
+    gap: 12px;
+  }
+
+  .mobile-joystick {
+    width: 104px;
+    height: 104px;
+  }
+
+  .mobile-joystick-thumb {
+    width: 48px;
+    height: 48px;
+  }
+
+  .mobile-control-button {
+    min-width: 78px;
+    min-height: 52px;
+    font-size: 0.92rem;
+  }
+
+  .game-dialog {
+    width: min(340px, calc(100vw - 24px));
+    padding: 20px 16px 18px;
+  }
+
   .start-illustrations {
     grid-template-columns: 1fr;
+  }
+
+  .game-dialog-text {
+    font-size: 1rem;
+  }
+
+  .game-countdown {
+    font-size: 1.2rem;
   }
 }
