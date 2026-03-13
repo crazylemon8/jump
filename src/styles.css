@@ -3,6 +3,16 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+  --mobile-edge: 12px;
+  --mobile-top-gap: 10px;
+  --mobile-control-bottom: 40px;
+  --mobile-joystick-size: 104px;
+  --mobile-sprint-width: 92px;
+  --mobile-sprint-height: 60px;
+  --mobile-score-width: 64px;
+  --mobile-score-font: 1.35rem;
+  --mobile-chip-font: 0.9rem;
+  --mobile-meter-width: 148px;
   color: #f1faee;
   background:
     radial-gradient(circle at top, rgba(255, 112, 41, 0.18), transparent 42%),
@@ -230,29 +240,59 @@ body {
 }
 
 @media (pointer: coarse) {
+  :root {
+    --mobile-edge: clamp(8px, 2.8vw, 20px);
+    --mobile-top-gap: clamp(8px, 2vh, 16px);
+    --mobile-control-bottom: clamp(24px, 6dvh, 56px);
+    --mobile-joystick-size: clamp(88px, 22vw, 112px);
+    --mobile-sprint-width: clamp(88px, 24vw, 120px);
+    --mobile-sprint-height: clamp(48px, 11vw, 64px);
+    --mobile-score-width: clamp(56px, 18vw, 84px);
+    --mobile-score-font: clamp(1.1rem, 5vw, 1.6rem);
+    --mobile-chip-font: clamp(0.78rem, 2.8vw, 0.95rem);
+    --mobile-meter-width: clamp(112px, 38vw, 176px);
+  }
+
   .mobile-controls {
     display: block;
-    left: calc(20px + var(--safe-left));
-    right: calc(20px + var(--safe-right));
-    bottom: calc(48px + var(--safe-bottom));
+    left: calc(var(--mobile-edge) + var(--safe-left));
+    right: calc(var(--mobile-edge) + var(--safe-right));
+    bottom: calc(var(--mobile-control-bottom) + var(--safe-bottom));
   }
 
   .hud-pause {
-    right: calc(20px + var(--safe-right));
-    top: calc(72px + var(--safe-top));
+    right: calc(var(--mobile-edge) + var(--safe-right));
+    top: calc(clamp(46px, 8dvh, 72px) + var(--safe-top));
     bottom: auto;
   }
 
   .hud-meter {
-    left: calc(20px + var(--safe-left));
+    left: calc(var(--mobile-edge) + var(--safe-left));
     right: auto;
-    top: calc(72px + var(--safe-top));
+    top: calc(clamp(46px, 8dvh, 72px) + var(--safe-top));
     bottom: auto;
   }
 
   #mobile-sprint {
     left: 0;
     bottom: 25%;
+  }
+
+  .mobile-joystick {
+    width: var(--mobile-joystick-size);
+    height: var(--mobile-joystick-size);
+    margin-left: auto;
+  }
+
+  .mobile-joystick-thumb {
+    width: calc(var(--mobile-joystick-size) * 0.46);
+    height: calc(var(--mobile-joystick-size) * 0.46);
+  }
+
+  .mobile-control-button {
+    min-width: var(--mobile-sprint-width);
+    min-height: var(--mobile-sprint-height);
+    font-size: var(--mobile-chip-font);
   }
 }
 
@@ -386,67 +426,50 @@ canvas {
   }
 
   .hud-score {
-    top: calc(10px + var(--safe-top));
-    min-width: 64px;
-    padding: 8px 8px;
-    font-size: 1.35rem;
+    top: calc(var(--mobile-top-gap) + var(--safe-top));
+    min-width: var(--mobile-score-width);
+    padding: clamp(6px, 1.8vw, 8px) clamp(7px, 2vw, 10px);
+    font-size: var(--mobile-score-font);
   }
 
   #hud-red {
-    left: calc(8px + var(--safe-left));
+    left: calc(var(--mobile-edge) + var(--safe-left));
   }
 
   #hud-green {
-    right: calc(8px + var(--safe-right));
+    right: calc(var(--mobile-edge) + var(--safe-right));
   }
 
   .hud-meter {
-    left: calc(8px + var(--safe-left));
+    left: calc(var(--mobile-edge) + var(--safe-left));
     right: auto;
-    top: calc(54px + var(--safe-top));
+    top: calc(clamp(40px, 7dvh, 54px) + var(--safe-top));
     bottom: auto;
-    width: min(148px, calc(50vw - 20px));
-    padding: 7px 9px 9px;
+    width: var(--mobile-meter-width);
+    padding: clamp(6px, 1.8vw, 8px) clamp(7px, 2vw, 10px) clamp(7px, 2vw, 10px);
   }
 
   .hud-pause {
-    right: calc(8px + var(--safe-right));
-    top: calc(54px + var(--safe-top));
+    right: calc(var(--mobile-edge) + var(--safe-right));
+    top: calc(clamp(40px, 7dvh, 54px) + var(--safe-top));
     bottom: auto;
   }
 
   .hud-pause-button {
-    padding: 7px 11px;
-    font-size: 0.84rem;
+    padding: clamp(6px, 1.8vw, 8px) clamp(10px, 3vw, 14px);
+    font-size: var(--mobile-chip-font);
   }
 
   .mobile-controls {
-    left: calc(8px + var(--safe-left));
-    right: calc(8px + var(--safe-right));
-    bottom: calc(40px + var(--safe-bottom));
-    min-height: 104px;
+    left: calc(var(--mobile-edge) + var(--safe-left));
+    right: calc(var(--mobile-edge) + var(--safe-right));
+    bottom: calc(var(--mobile-control-bottom) + var(--safe-bottom));
+    min-height: var(--mobile-joystick-size);
   }
 
   #mobile-sprint {
     left: 0;
     bottom: 25%;
-  }
-
-  .mobile-joystick {
-    width: 104px;
-    height: 104px;
-    margin-left: auto;
-  }
-
-  .mobile-joystick-thumb {
-    width: 48px;
-    height: 48px;
-  }
-
-  .mobile-control-button {
-    min-width: 92px;
-    min-height: 60px;
-    font-size: 1rem;
   }
 
   .game-dialog {
