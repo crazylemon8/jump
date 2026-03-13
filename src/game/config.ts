@@ -9,6 +9,6 @@ export const CHUNK_TILE_SIZE = 16;
 export const CHUNK_VIEW_PADDING = 1;
 export const SHOW_GRID = false;
 
-export const PLAYER_SPEED = 260;
+export const PLAYER_SPEED = IS_MOBILE_VIEW ? 320 : 260;
 export const BULLET_SPEED = 520;
 export const BULLET_CULL_MARGIN = 64;
