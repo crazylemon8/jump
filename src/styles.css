@@ -12,8 +12,7 @@
 
 html,
 body,
-#app-shell,
-#app {
+#app-shell {
   margin: 0;
   min-height: 100%;
   width: 100%;
@@ -31,6 +30,19 @@ body {
   min-height: 100vh;
   padding: 24px;
   touch-action: manipulation;
+}
+
+#app {
+  position: relative;
+  width: min(100%, 960px);
+  aspect-ratio: 16 / 9;
+}
+
+#app canvas {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+  border-radius: 18px;
 }
 
 .hud-score {
@@ -154,12 +166,18 @@ body {
 
 .mobile-controls {
   position: absolute;
+  left: 20px;
   right: 20px;
   bottom: 24px;
   z-index: 2;
   display: none;
-  align-items: end;
-  gap: 14px;
+  min-height: 112px;
+}
+
+#mobile-sprint {
+  position: absolute;
+  left: 0;
+  bottom: 0;
 }
 
 .mobile-control-button {
@@ -207,21 +225,28 @@ body {
 
 @media (pointer: coarse) {
   .mobile-controls {
-    display: flex;
+    display: block;
+    left: 20px;
     right: 20px;
     bottom: 20px;
   }
 
   .hud-pause {
     right: 20px;
-    bottom: 184px;
+    top: 72px;
+    bottom: auto;
   }
 
   .hud-meter {
-    left: auto;
-    right: 20px;
+    left: 20px;
+    right: auto;
     top: 72px;
     bottom: auto;
+  }
+
+  #mobile-sprint {
+    left: 0;
+    bottom: 0;
   }
 }
 
@@ -348,6 +373,11 @@ canvas {
     padding: 12px;
   }
 
+  #app {
+    width: min(100%, calc(100vw - 24px));
+    aspect-ratio: 16 / 11;
+  }
+
   .hud-score {
     top: 14px;
     min-width: 72px;
@@ -364,8 +394,8 @@ canvas {
   }
 
   .hud-meter {
-    left: auto;
-    right: 12px;
+    left: 12px;
+    right: auto;
     top: 64px;
     bottom: auto;
     width: 146px;
@@ -374,7 +404,8 @@ canvas {
 
   .hud-pause {
     right: 12px;
-    bottom: 176px;
+    top: 64px;
+    bottom: auto;
   }
 
   .hud-pause-button {
@@ -383,14 +414,21 @@ canvas {
   }
 
   .mobile-controls {
+    left: 12px;
     right: 12px;
     bottom: 12px;
-    gap: 12px;
+    min-height: 104px;
+  }
+
+  #mobile-sprint {
+    left: 0;
+    bottom: 0;
   }
 
   .mobile-joystick {
     width: 104px;
     height: 104px;
+    margin-left: auto;
   }
 
   .mobile-joystick-thumb {
