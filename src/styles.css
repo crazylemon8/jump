@@ -234,7 +234,7 @@ body {
     display: block;
     left: calc(20px + var(--safe-left));
     right: calc(20px + var(--safe-right));
-    bottom: calc(20px + var(--safe-bottom));
+    bottom: calc(48px + var(--safe-bottom));
   }
 
   .hud-pause {
@@ -252,7 +252,7 @@ body {
 
   #mobile-sprint {
     left: 0;
-    bottom: 0;
+    bottom: 25%;
   }
 }
 
@@ -423,13 +423,13 @@ canvas {
   .mobile-controls {
     left: calc(8px + var(--safe-left));
     right: calc(8px + var(--safe-right));
-    bottom: calc(8px + var(--safe-bottom));
+    bottom: calc(40px + var(--safe-bottom));
     min-height: 104px;
   }
 
   #mobile-sprint {
     left: 0;
-    bottom: 0;
+    bottom: 25%;
   }
 
   .mobile-joystick {
@@ -444,9 +444,9 @@ canvas {
   }
 
   .mobile-control-button {
-    min-width: 74px;
-    min-height: 48px;
-    font-size: 0.88rem;
+    min-width: 92px;
+    min-height: 60px;
+    font-size: 1rem;
   }
 
   .game-dialog {
