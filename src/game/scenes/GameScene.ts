@@ -24,12 +24,12 @@ export class GameScene extends Phaser.Scene {
     GameScene.PLAYER_DISPLAY_WIDTH / GameScene.PLAYER_TEXTURE_WIDTH;
   private static readonly PLAYER_BASE_SCALE_Y =
     GameScene.PLAYER_DISPLAY_HEIGHT / GameScene.PLAYER_TEXTURE_HEIGHT;
-  private static readonly FLOOR_Y = 476;
   private static readonly FLOOR_WIDTH = 640;
   private static readonly FLOOR_HEIGHT = 36;
   private static readonly FLOOR_X = GAME_WIDTH / 2;
   private static readonly PLAYER_SPAWN_X = GAME_WIDTH / 2;
-  private static readonly PLAYER_SPAWN_Y = 390;
+  private static readonly FLOOR_Y = GAME_HEIGHT > 540 ? 600 : 476;
+  private static readonly PLAYER_SPAWN_Y = GameScene.FLOOR_Y - 86;
 
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private controls!: Controls;
