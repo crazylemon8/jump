@@ -24,12 +24,12 @@ export class GameScene extends Phaser.Scene {
     GameScene.PLAYER_DISPLAY_WIDTH / GameScene.PLAYER_TEXTURE_WIDTH;
   private static readonly PLAYER_BASE_SCALE_Y =
     GameScene.PLAYER_DISPLAY_HEIGHT / GameScene.PLAYER_TEXTURE_HEIGHT;
-  private static readonly FLOOR_WIDTH = 640;
-  private static readonly FLOOR_HEIGHT = 36;
+  private static readonly FLOOR_WIDTH = GAME_WIDTH > 700 ? 640 : Math.round(GAME_WIDTH * 0.76);
+  private static readonly FLOOR_HEIGHT = GAME_WIDTH > 700 ? 36 : 30;
   private static readonly FLOOR_X = GAME_WIDTH / 2;
   private static readonly PLAYER_SPAWN_X = GAME_WIDTH / 2;
-  private static readonly FLOOR_Y = GAME_HEIGHT > 540 ? 600 : 476;
-  private static readonly PLAYER_SPAWN_Y = GameScene.FLOOR_Y - 86;
+  private static readonly FLOOR_Y = GAME_HEIGHT > 700 ? Math.round(GAME_HEIGHT * 0.78) : 476;
+  private static readonly PLAYER_SPAWN_Y = GameScene.FLOOR_Y - (GAME_HEIGHT > 700 ? 96 : 86);
 
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private controls!: Controls;
@@ -301,17 +301,28 @@ export class GameScene extends Phaser.Scene {
   private createGoalMarkers(): void {
     const graphics = this.add.graphics();
     graphics.setDepth(-5);
+    const leftEdge = GameScene.FLOOR_X - GameScene.FLOOR_WIDTH / 2;
+    const rightEdge = GameScene.FLOOR_X + GameScene.FLOOR_WIDTH / 2;
+    const arrowInset = GAME_WIDTH > 700 ? 42 : 30;
+    const arrowTip = GAME_WIDTH > 700 ? 84 : 58;
 
     graphics.fillStyle(0xff5757, 0.95);
-    graphics.fillTriangle(104, GameScene.FLOOR_Y - 12, 62, GameScene.FLOOR_Y + 10, 104, GameScene.FLOOR_Y + 30);
+    graphics.fillTriangle(
+      leftEdge - arrowInset,
+      GameScene.FLOOR_Y - 12,
+      leftEdge - arrowTip,
+      GameScene.FLOOR_Y + 10,
+      leftEdge - arrowInset,
+      GameScene.FLOOR_Y + 30
+    );
 
     graphics.fillStyle(0x67e27d, 0.95);
     graphics.fillTriangle(
-      GAME_WIDTH - 104,
+      rightEdge + arrowInset,
       GameScene.FLOOR_Y - 12,
-      GAME_WIDTH - 62,
+      rightEdge + arrowTip,
       GameScene.FLOOR_Y + 10,
-      GAME_WIDTH - 104,
+      rightEdge + arrowInset,
       GameScene.FLOOR_Y + 30
     );
   }
